@@ -81,6 +81,20 @@ function M.get(root)
   return p
 end
 
+local boot = {} ---@type table<string, boolean>
+
+--- Whether any build file in the project (3 levels deep) uses Spring Boot.
+function M.is_boot(root)
+  if boot[root] == nil then
+    local res = vim.system({
+      "rg", "--quiet", "--max-depth", "3", "--fixed-strings", "org.springframework.boot",
+      "--glob", "{pom.xml,build.gradle,build.gradle.kts,libs.versions.toml,bleep.yaml}", root,
+    }):wait()
+    boot[root] = res.code == 0
+  end
+  return boot[root]
+end
+
 ---@return sprout.Project?
 function M.current()
   return M.get(M.root())

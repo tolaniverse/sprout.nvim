@@ -36,6 +36,14 @@ function M.check()
   else
     h.warn("java-debug-adapter / java-test not installed: `:MasonInstall java-debug-adapter java-test`")
   end
+  local spring_ls = require("sprout.spring_ls")
+  if not config.spring_ls.enabled then
+    h.info("Spring Boot language server disabled")
+  elseif spring_ls.jar() then
+    h.ok("Spring Boot language server: " .. spring_ls.jar() .. " (" .. #spring_ls.bundles() .. " jdtls bundles)")
+  else
+    h.warn("Spring Boot language server not installed: `:MasonInstall vscode-spring-boot-tools`")
+  end
   for _, exe in ipairs({ "rg", "bleep", "gradle", "mvn" }) do
     if vim.fn.executable(exe) == 1 then
       h.ok(exe .. " found")

@@ -15,6 +15,10 @@ Spring Boot and JVM projects in Neovim, without Eclipse files in your repo.
   `libs.versions.toml` (or `git pull` a change) and you're asked, like IntelliJ. Choose
   now / always / not now / never; always and never are saved per project. You get a notification
   when the re-import finishes, and new dependencies then show up in completion.
+- **Spring Boot language server** (Mason's `vscode-spring-boot-tools`), started only in Spring
+  Boot projects: completion, validation and hover in `application*.yml`/`.properties`
+  (from your actual dependencies), `@Value("${…}")` completion, and Spring symbols. sprout connects
+  it to jdtls for classpath and type information, the way VS Code does.
 - **Completion tuned for Spring**: postfix templates, lazily resolved auto-imports, JUnit/
   AssertJ/Mockito/MockMvc static members, AWT/Swing/JDK internals filtered out.
 - **Run / debug / build / test** via `gradlew`, `mvnw` or `bleep`, on the project JDK, with
@@ -34,6 +38,7 @@ return {
   {
     "you/sprout.nvim",
     cmd = "Sprout",
+    ft = { "java", "yaml", "jproperties" },
     opts = {},
     keys = {
       { "<leader>jr", "<cmd>Sprout run<cr>", desc = "Run app" },
@@ -122,6 +127,10 @@ The file also pins the project root, which is useful in monorepos.
 - For Gradle, JDT still compiles into `bin/`. Spring Initializr's `.gitignore` already ignores it.
 - JVM args reach Gradle's `bootRun` through an init script in `stdpath("cache")`, so your
   `build.gradle` doesn't change.
+- Spring Boot language server: `:MasonInstall vscode-spring-boot-tools`; it runs on JDK 21+ and
+  uses about 1 GB of heap at most. Property completion that depends on your classpath starts once
+  jdtls has imported the project, which requires opening a Java file. Turn it off with
+  `opts = { spring_ls = { enabled = false } }`.
 - Kotlin: run/build/test/endpoints/JDK all work. Kotlin language support comes from LazyVim's
   `lang.kotlin` extra, not jdtls.
 - bleep: Java inside bleep builds is served by Metals over BSP. sprout handles run/compile/test.

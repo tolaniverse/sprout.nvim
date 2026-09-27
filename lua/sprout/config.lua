@@ -16,6 +16,14 @@ local defaults = {
   -- Extra JDK homes to consider, on top of SDKMAN, JAVA_HOME and
   -- /Library/Java/JavaVirtualMachines.
   jdks = {},
+  -- Spring Boot language server (Mason: vscode-spring-boot-tools), started
+  -- only in Spring Boot projects: application.yml/properties completion,
+  -- validation and hover; @Value completion; bean/endpoint symbols.
+  spring_ls = {
+    enabled = true,
+    java = 21, -- needs 21+
+    jvm_args = { "-Xmx1024m" },
+  },
   run = {
     -- Terminal height for run/build output.
     height = 15,

@@ -51,21 +51,6 @@ local function init_script()
   return path
 end
 
-local function read(path)
-  local fd = io.open(path, "r")
-  if not fd then
-    return ""
-  end
-  local s = fd:read("*a")
-  fd:close()
-  return s
-end
-
-local function is_boot(root)
-  local f = read(root .. "/build.gradle.kts") .. read(root .. "/build.gradle") .. read(root .. "/pom.xml")
-  return f:find("org.springframework.boot", 1, true) ~= nil
-end
-
 --- IntelliJ module names ("shop.api.main") → Gradle path (":api") / Maven selector (":api").
 local function module_from_idea(p, name)
   if not name then
@@ -146,7 +131,7 @@ local function command(p, action, rs)
       end
       return cmd, env
     end
-    local cmd = { p.exe, "--init-script", init_script(), gradle_task(rs.module, is_boot(p.root) and "bootRun" or "run") }
+    local cmd = { p.exe, "--init-script", init_script(), gradle_task(rs.module, project.is_boot(p.root) and "bootRun" or "run") }
     if #rs.args > 0 then
       cmd[#cmd + 1] = "--args=" .. table.concat(rs.args, " ")
     end
@@ -163,7 +148,7 @@ local function command(p, action, rs)
     if goals[action] then
       return list(cmd, goals[action]), env
     end
-    if is_boot(p.root) then
+    if project.is_boot(p.root) then
       cmd[#cmd + 1] = "spring-boot:run"
       if #vm > 0 then
         cmd[#cmd + 1] = "-Dspring-boot.run.jvmArguments=" .. table.concat(vm, " ")

@@ -244,6 +244,7 @@ end
 
 function M.setup(opts)
   config.setup(opts)
+  require("sprout.spring_ls").setup()
   if config.jdtls.enabled then
     vim.api.nvim_create_autocmd("FileType", {
       group = vim.api.nvim_create_augroup("sprout.jdtls", { clear = true }),
