@@ -2,7 +2,7 @@ local M = {}
 
 function M.check()
   local h = vim.health
-  h.start("sprout")
+  h.start("sprout " .. require("sprout").version)
   local jdk = require("sprout.jdk")
   local jdtls = require("sprout.jdtls")
   local config = require("sprout.config")

@@ -2,6 +2,9 @@ local config = require("sprout.config")
 
 local M = {}
 
+-- Bumped on release; must match the git tag (checked by .github/workflows/release.yml).
+M.version = "0.1.0"
+
 local function lazy(mod, fn)
   return function(...)
     return require(mod)[fn](...)
@@ -213,6 +216,9 @@ local subcommands = {
   endpoints = M.endpoints,
   config = M.config_files,
   info = M.info,
+  version = function()
+    vim.notify("sprout.nvim " .. M.version)
+  end,
   init = M.init,
   jdk = M.pick_jdk,
   unclutter = M.unclutter,

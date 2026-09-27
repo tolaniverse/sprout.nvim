@@ -36,7 +36,8 @@ extra's jdtls setup, so only one jdtls is started.
 -- lua/plugins/sprout.lua
 return {
   {
-    "you/sprout.nvim",
+    "tolaniverse/sprout.nvim",
+    version = "*", -- latest release; drop it to follow main
     cmd = "Sprout",
     ft = { "java", "yaml", "jproperties" },
     opts = {},
@@ -58,7 +59,7 @@ return {
   },
   {
     "mfussenegger/nvim-jdtls",
-    dependencies = { "you/sprout.nvim" },
+    dependencies = { "tolaniverse/sprout.nvim" },
     opts = function(_, opts)
       return require("sprout.jdtls").lazyvim_opts(opts)
     end,
@@ -89,6 +90,7 @@ Without LazyVim, install `mfussenegger/nvim-jdtls` and call
 | `reload`      | Re-import Gradle/Maven now (every build file in the project)     |
 | `jdk`         | Pick the project JDK (saved to `.idea/sprout.json`)              |
 | `init`        | Create/open `.idea/sprout.json`                                  |
+| `version`     | Show the installed version                                       |
 | `info`        | Root, build tool, JDK and its source, the exact run command      |
 | `unclutter`   | Delete existing Eclipse files (asks first) and reset the jdtls workspace |
 | `wipe`        | Wipe the jdtls workspace and restart                             |
@@ -134,3 +136,14 @@ The file also pins the project root, which is useful in monorepos.
 - Kotlin: run/build/test/endpoints/JDK all work. Kotlin language support comes from LazyVim's
   `lang.kotlin` extra, not jdtls.
 - bleep: Java inside bleep builds is served by Metals over BSP. sprout handles run/compile/test.
+
+## Versioning
+
+Releases follow [semver](https://semver.org) and are tagged `vX.Y.Z`. With `version = "*"`,
+lazy.nvim installs the latest release and `:Lazy update` moves between releases. Changes are
+listed in [CHANGELOG.md](CHANGELOG.md).
+
+To cut a release: set `M.version` in `lua/sprout/init.lua`, move the `Unreleased` entries in
+`CHANGELOG.md` under the new version, commit, then `git tag vX.Y.Z && git push origin vX.Y.Z`.
+The release workflow checks that the tag matches `M.version` and publishes the GitHub release
+with that version's changelog section.
