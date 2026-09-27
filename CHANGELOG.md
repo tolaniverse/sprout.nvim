@@ -5,6 +5,16 @@ versions: [semver](https://semver.org).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-27
+
+### Fixed
+
+- jdtls could hang on startup in Gradle projects when reopening an existing workspace (Buildship
+  "Unable to acquire the state change lock"), leaving Java and `application.yml` completion
+  dead. Spring Boot Tools' jdtls bundles require Buildship; they are no longer started during
+  jdtls' initialize but loaded with `java.reloadBundles` once jdtls is ready.
+- If jdtls still hits that Buildship lock, sprout restarts it once and says so.
+
 ## [0.2.0] - 2026-09-27
 
 ### Added
@@ -43,6 +53,7 @@ versions: [semver](https://semver.org).
   `:checkhealth sprout`.
 - LazyVim integration through the java extra's nvim-jdtls options.
 
-[Unreleased]: https://github.com/tolaniverse/sprout.nvim/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/tolaniverse/sprout.nvim/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/tolaniverse/sprout.nvim/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/tolaniverse/sprout.nvim/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/tolaniverse/sprout.nvim/releases/tag/v0.1.0

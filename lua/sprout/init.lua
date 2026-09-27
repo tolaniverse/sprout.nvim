@@ -3,7 +3,7 @@ local config = require("sprout.config")
 local M = {}
 
 -- Bumped on release; must match the git tag (checked by .github/workflows/release.yml).
-M.version = "0.2.0"
+M.version = "0.2.1"
 
 local function lazy(mod, fn)
   return function(...)

@@ -135,27 +135,23 @@ function M.config(bufnr)
     cmd = cmd,
     root_dir = root,
     settings = settings,
-    init_options = { settings = settings, bundles = M.bundles(root) },
+    init_options = { settings = settings, bundles = M.bundles() },
     capabilities = ok and blink.get_lsp_capabilities() or nil,
   }))
 end
 
 --- Debug/test bundles from Mason, if installed.
-function M.bundles(root)
+function M.bundles()
   local b = vim.fn.glob(mason("share/java-debug-adapter/com.microsoft.java.debug.plugin-*.jar"), false, true)
   if #b > 0 then
     vim.list_extend(b, vim.tbl_filter(function(j)
       return not j:find("jar%-with%-dependencies%.jar$") and not j:find("jacocoagent%.jar$")
     end, vim.fn.glob(mason("share/java-test/*.jar"), false, true)))
   end
-  return vim.list_extend(b, M.spring_bundles(root))
-end
-
---- Spring Boot Tools' jdtls extension, which the Spring language server
---- talks to. Only loaded into Spring Boot projects.
-function M.spring_bundles(root)
-  local spring_ls = require("sprout.spring_ls")
-  return spring_ls.wanted(root) and spring_ls.bundles() or {}
+  -- Spring Boot Tools' bundles are not listed here: they require Buildship,
+  -- and starting them during initialize can deadlock jdtls' own Buildship
+  -- startup. spring_ls loads them with java.reloadBundles after ServiceReady.
+  return b
 end
 
 --- Hook for LazyVim's java extra: adjusts its nvim-jdtls opts in place.
@@ -187,7 +183,7 @@ function M.lazyvim_opts(opts)
       local bundles = vim.tbl_filter(function(b)
         return not b:find("jar%-with%-dependencies%.jar$") and not b:find("jacocoagent%.jar$")
       end, cfg.init_options.bundles or {})
-      cfg.init_options.bundles = vim.list_extend(bundles, M.spring_bundles(cfg.root_dir))
+      cfg.init_options.bundles = bundles
     end
     reload.apply(cfg)
     require("sprout.spring_ls").track_ready(cfg)

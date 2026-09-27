@@ -135,6 +135,9 @@ The file also pins the project root, which is useful in monorepos.
 
 - **Existing projects**: jdtls keeps using Eclipse files that already exist at the root, so run
   `:Sprout unclutter` once in projects that have them.
+- jdtls' Gradle support (Buildship) can deadlock while reopening a workspace. sprout keeps Spring
+  bundles out of jdtls' startup to avoid it and restarts jdtls once if it happens anyway; if it
+  keeps happening, `:Sprout wipe` resets the workspace.
 - For Gradle, JDT still compiles into `bin/`. Spring Initializr's `.gitignore` already ignores it.
 - JVM args reach Gradle's `bootRun` through an init script in `stdpath("cache")`, so your
   `build.gradle` doesn't change.

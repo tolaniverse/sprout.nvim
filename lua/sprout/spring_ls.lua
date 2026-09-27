@@ -65,6 +65,7 @@ local function is_boot_config(name)
 end
 
 local ready = {} ---@type table<string, boolean> jdtls root → ServiceReady seen
+local bundles_loaded = {} ---@type table<string, boolean|"loading"> jdtls root → Spring bundles in
 
 local function jdtls_for(root)
   for _, c in ipairs(vim.lsp.get_clients({ name = "jdtls" })) do
@@ -74,8 +75,43 @@ local function jdtls_for(root)
   end
 end
 
---- Record jdtls' ServiceReady per root (nvim-jdtls calls this handler without
---- a ctx), keeping the default behaviour of echoing the status line.
+local restarted = {} ---@type table<string, boolean>
+
+--- Buildship (jdtls' Gradle support) can deadlock on startup when reopening a
+--- workspace: its activator waits for a model-loading job that needs a class
+--- from the bundle being activated. jdtls then never becomes ready. It is a
+--- race, so a restart usually gets through; do that once per project.
+local function recover(root, client_id)
+  if restarted[root] then
+    return vim.notify("sprout: jdtls is stuck again (Buildship lock). Try :Sprout wipe.", vim.log.levels.ERROR)
+  end
+  restarted[root] = true
+  local client = vim.lsp.get_client_by_id(client_id)
+  if not client then
+    return
+  end
+  vim.notify("sprout: jdtls deadlocked while starting Gradle support; restarting it", vim.log.levels.WARN)
+  local cfg, bufs = client.config, vim.tbl_keys(client.attached_buffers)
+  ready[root], bundles_loaded[root] = nil, nil
+  client:stop(true) -- a deadlocked server won't answer shutdown
+  local function again(n)
+    if not client:is_stopped() and n > 0 then
+      return vim.defer_fn(function()
+        again(n - 1)
+      end, 200)
+    end
+    for _, b in ipairs(bufs) do
+      if vim.api.nvim_buf_is_valid(b) then
+        vim.lsp.start(cfg, { bufnr = b })
+      end
+    end
+  end
+  again(50)
+end
+
+--- Per jdtls config: record ServiceReady per root (nvim-jdtls calls the
+--- status handler without a ctx), keep the default status echo, and watch the
+--- log for the Buildship deadlock.
 function M.track_ready(cfg)
   local root = cfg.root_dir
   cfg.handlers = cfg.handlers or {}
@@ -90,6 +126,18 @@ function M.track_ready(cfg)
     if result and result.message then
       vim.api.nvim_echo({ { result.message:sub(1, vim.v.echospace), "Function" } }, false, {})
     end
+  end
+  local log = cfg.handlers["window/logMessage"] or vim.lsp.handlers["window/logMessage"]
+  cfg.handlers["window/logMessage"] = function(err, result, ctx, ...)
+    if root and result and type(result.message) == "string"
+      and result.message:find("Unable to acquire the state change lock", 1, true)
+      and result.message:find("buildship", 1, true)
+    then
+      vim.schedule(function()
+        recover(root, ctx.client_id)
+      end)
+    end
+    return log(err, result, ctx, ...)
   end
   return cfg
 end
@@ -163,20 +211,42 @@ handlers["sts/addClasspathListener"] = function(err, params, ctx)
 end
 
 --- Wait until jdtls on the same root has imported the project (ServiceReady),
---- then let the Spring server start listening. Earlier, the listener request
---- sits behind the import and the Spring server times it out after 10s.
+--- load the Spring bundles into it, then let the Spring server start
+--- listening for classpaths. Loading the bundles at jdtls' initialize instead
+--- races Buildship's startup (see jdtls.lua), and asking for classpaths during
+--- the import makes the Spring server time the request out after 10s.
 local function enable_classpath(client)
+  local root = client.root_dir
   local tries = 0
+  local function enable()
+    client:request("workspace/executeCommand", {
+      command = "sts.vscode-spring-boot.enableClasspathListening",
+      arguments = { true },
+    }, function() end)
+  end
   local function try()
     if client:is_stopped() then
       return
     end
-    if ready[client.root_dir] and jdtls_for(client.root_dir) then
-      client:request("workspace/executeCommand", {
-        command = "sts.vscode-spring-boot.enableClasspathListening",
-        arguments = { true },
-      }, function() end)
-      return
+    local jdtls = ready[root] and jdtls_for(root)
+    if jdtls then
+      if bundles_loaded[root] == true then
+        return enable()
+      elseif bundles_loaded[root] ~= "loading" then
+        bundles_loaded[root] = "loading"
+        jdtls:request("workspace/executeCommand", {
+          command = "java.reloadBundles",
+          arguments = { M.bundles() },
+        }, function(err)
+          if err then
+            bundles_loaded[root] = nil
+            return vim.notify("sprout: jdtls couldn't load the Spring Boot bundles: " .. (err.message or ""), vim.log.levels.WARN)
+          end
+          bundles_loaded[root] = true
+          enable()
+        end)
+        return
+      end
     end
     tries = tries + 1
     if tries < 600 then -- 10 min: jdtls only starts once a Java file is opened
