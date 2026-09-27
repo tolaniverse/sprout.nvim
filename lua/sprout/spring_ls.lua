@@ -202,6 +202,42 @@ function M.cmd()
   return cmd
 end
 
+local starting = {} ---@type table<string, boolean>
+
+--- The Spring server gets its classpath from jdtls, and jdtls normally starts
+--- with the first Java buffer. When application.yml is opened first, start it
+--- from a hidden buffer holding the @SpringBootApplication class. The buffer is
+--- made current while its filetype is set, so whatever starts jdtls (LazyVim's
+--- java extra, or sprout's own autocmd) attaches it and not the YAML buffer.
+local function ensure_jdtls(root)
+  if starting[root] then
+    return
+  end
+  for _, c in ipairs(vim.lsp.get_clients({ name = "jdtls" })) do
+    if c.root_dir == root then
+      return
+    end
+  end
+  starting[root] = true
+  local function first(args)
+    local res = vim.system(vim.list_extend({ "rg", "--glob", "*.java", "--glob", "!**/build/**", "--glob", "!**/target/**" }, args), { text = true }):wait()
+    return (res.stdout or ""):match("[^\n]+")
+  end
+  local file = first({ "--files-with-matches", "--max-count", "1", "@SpringBootApplication", root })
+    or first({ "--files", root })
+  if not file then
+    return
+  end
+  local buf = vim.fn.bufadd(file)
+  vim.bo[buf].buflisted = false
+  vim.api.nvim_buf_call(buf, function()
+    vim.fn.bufload(buf)
+    if vim.bo[buf].filetype ~= "java" then
+      vim.bo[buf].filetype = "java"
+    end
+  end)
+end
+
 ---@param bufnr integer
 function M.attach(bufnr)
   local name = vim.api.nvim_buf_get_name(bufnr)
@@ -234,6 +270,11 @@ function M.attach(bufnr)
     handlers = handlers,
     on_init = enable_classpath,
   }, { bufnr = bufnr })
+  if ft ~= "java" then
+    vim.schedule(function()
+      ensure_jdtls(root)
+    end)
+  end
 end
 
 function M.setup()

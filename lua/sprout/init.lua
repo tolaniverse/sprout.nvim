@@ -215,6 +215,9 @@ local subcommands = {
   toggle = M.toggle,
   endpoints = M.endpoints,
   config = M.config_files,
+  datasource = function()
+    require("sprout.datasource").run()
+  end,
   info = M.info,
   version = function()
     vim.notify("sprout.nvim " .. M.version)
