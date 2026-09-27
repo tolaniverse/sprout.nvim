@@ -5,9 +5,21 @@ versions: [semver](https://semver.org).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-27
+
 ### Added
 
+- `:Sprout datasource`: writes `spring.datasource` (and `spring.jpa` with Data JPA) for the JDBC
+  driver in your build (PostgreSQL, MySQL, MariaDB, H2, SQL Server, Oracle) into
+  `application.yml` or `.properties`, with `${DB_URL:…}`-style placeholders. Merges under an
+  existing `spring:` key, follows the file's indent, never overwrites an existing datasource.
 - MIT license.
+
+### Fixed
+
+- Property completion in `application.yml`/`.properties` was empty when the file was opened
+  before any Java file: jdtls (the Spring language server's classpath source) now starts from a
+  hidden buffer holding the `@SpringBootApplication` class.
 
 ## [0.1.0] - 2026-09-27
 
@@ -31,5 +43,6 @@ versions: [semver](https://semver.org).
   `:checkhealth sprout`.
 - LazyVim integration through the java extra's nvim-jdtls options.
 
-[Unreleased]: https://github.com/tolaniverse/sprout.nvim/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/tolaniverse/sprout.nvim/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/tolaniverse/sprout.nvim/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/tolaniverse/sprout.nvim/releases/tag/v0.1.0

@@ -19,6 +19,13 @@ Spring Boot and JVM projects in Neovim, without Eclipse files in your repo.
   Boot projects: completion, validation and hover in `application*.yml`/`.properties`
   (from your actual dependencies), `@Value("${…}")` completion, and Spring symbols. sprout connects
   it to jdtls for classpath and type information, the way VS Code does.
+- **IntelliJ-style `application.yml`**: type `datasource` (or even `sp.ds.url`) anywhere and
+  pick `spring.datasource.url`; the nested `spring:` → `datasource:` → `url:` structure is
+  inserted for you. Values complete too: driver classes from your classpath, `ddl-auto` modes,
+  log levels, booleans. Works even when the YAML is the first file you open.
+- **`:Sprout datasource`**: sets up the database in one go. It detects the JDBC driver in your
+  build and writes `spring.datasource` (plus `spring.jpa` with Data JPA) with
+  `${DB_URL:jdbc:postgresql://localhost:5432/app}`-style placeholders.
 - **Completion tuned for Spring**: postfix templates, lazily resolved auto-imports, JUnit/
   AssertJ/Mockito/MockMvc static members, AWT/Swing/JDK internals filtered out.
 - **Run / debug / build / test** via `gradlew`, `mvnw` or `bleep`, on the project JDK, with
@@ -55,6 +62,7 @@ return {
       { "<leader>ji", "<cmd>Sprout info<cr>", desc = "Project info" },
       { "<leader>jk", "<cmd>Sprout jdk<cr>", desc = "Pick project JDK" },
       { "<leader>ju", "<cmd>Sprout reload<cr>", desc = "Reload build config" },
+      { "<leader>jD", "<cmd>Sprout datasource<cr>", desc = "Set up datasource" },
     },
   },
   {
@@ -86,6 +94,7 @@ Without LazyVim, install `mfussenegger/nvim-jdtls` and call
 | `build` / `test` / `clean` | Through the build tool                              |
 | `exec <args>` | Run the wrapper with raw args, e.g. `:Sprout exec dependencies`  |
 | `endpoints`   | Pick an HTTP endpoint                                            |
+| `datasource`  | Add `spring.datasource` (+ `spring.jpa`) for the driver in your build |
 | `config`      | Pick an `application*.yml/properties`                            |
 | `reload`      | Re-import Gradle/Maven now (every build file in the project)     |
 | `jdk`         | Pick the project JDK (saved to `.idea/sprout.json`)              |
