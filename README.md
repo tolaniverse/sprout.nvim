@@ -15,7 +15,7 @@ Spring Boot and JVM projects in Neovim, without Eclipse files in your repo.
   profiles, env, `.env` and JVM args. Debug starts the app with JDWP and attaches nvim-dap.
 - **Endpoints picker**: every `@GetMapping`/`@PostMapping`/… in Java and Kotlin, with the
   class-level `@RequestMapping` prefix included.
-- **Small**: ~1k lines of Lua, no background work until you open a Java file or run a command.
+- **Small**: ~1.5k lines of Lua, no background work until you open a Java file or run a command.
 
 ## Install (LazyVim)
 
