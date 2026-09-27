@@ -216,6 +216,9 @@ local subcommands = {
   init = M.init,
   jdk = M.pick_jdk,
   unclutter = M.unclutter,
+  reload = function()
+    require("sprout.reload").reload()
+  end,
   wipe = function()
     require("jdtls.setup").wipe_data_and_restart()
   end,

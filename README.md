@@ -11,6 +11,12 @@ Spring Boot and JVM projects in Neovim, without Eclipse files in your repo.
   `.idea/sprout.json` → `.sdkmanrc` → `.idea/misc.xml` → build file (toolchain,
   `java.version`, …) → SDKMAN `current`. jdtls itself always runs on JDK 21+.
 - **Lombok** out of the box (Mason's jar).
+- **Build file changed → "Reload classpath?"**: save `pom.xml`, `build.gradle(.kts)` or
+  `libs.versions.toml` (or `git pull` a change) and you're asked, like IntelliJ. Choose
+  now / always / not now / never; always and never are saved per project. You get a notification
+  when the re-import finishes, and new dependencies then show up in completion.
+- **Completion tuned for Spring**: postfix templates, lazily resolved auto-imports, JUnit/
+  AssertJ/Mockito/MockMvc static members, AWT/Swing/JDK internals filtered out.
 - **Run / debug / build / test** via `gradlew`, `mvnw` or `bleep`, on the project JDK, with
   profiles, env, `.env` and JVM args. Debug starts the app with JDWP and attaches nvim-dap.
 - **Endpoints picker**: every `@GetMapping`/`@PostMapping`/… in Java and Kotlin, with the
@@ -42,6 +48,7 @@ return {
       { "<leader>jc", "<cmd>Sprout config<cr>", desc = "Spring config files" },
       { "<leader>ji", "<cmd>Sprout info<cr>", desc = "Project info" },
       { "<leader>jk", "<cmd>Sprout jdk<cr>", desc = "Pick project JDK" },
+      { "<leader>ju", "<cmd>Sprout reload<cr>", desc = "Reload build config" },
     },
   },
   {
@@ -51,8 +58,11 @@ return {
       return require("sprout.jdtls").lazyvim_opts(opts)
     end,
   },
-  -- If Mason has java-language-server installed, keep it from attaching next to jdtls.
-  { "neovim/nvim-lspconfig", opts = { servers = { java_language_server = { enabled = false } } } },
+  -- Keep other Mason JVM servers from attaching next to jdtls, if you have them installed.
+  {
+    "neovim/nvim-lspconfig",
+    opts = { servers = { java_language_server = { enabled = false }, gradle_ls = { enabled = false } } },
+  },
 }
 ```
 
@@ -71,6 +81,7 @@ Without LazyVim, install `mfussenegger/nvim-jdtls` and call
 | `exec <args>` | Run the wrapper with raw args, e.g. `:Sprout exec dependencies`  |
 | `endpoints`   | Pick an HTTP endpoint                                            |
 | `config`      | Pick an `application*.yml/properties`                            |
+| `reload`      | Re-import Gradle/Maven now (every build file in the project)     |
 | `jdk`         | Pick the project JDK (saved to `.idea/sprout.json`)              |
 | `init`        | Create/open `.idea/sprout.json`                                  |
 | `info`        | Root, build tool, JDK and its source, the exact run command      |
@@ -92,10 +103,12 @@ Everything is optional:
   "vmArgs": ["-Xmx1g"],
   "args": ["--debug"],
   "module": ":api",
+  "reload": "ask",
   "jdtls": { "java": { "format": { "enabled": false } } }
 }
 ```
 
+`reload` is `ask` (default), `auto` or `never`: what happens when a build file changes.
 `jdk` takes a major (`"21"`), an SDKMAN id (`"21.0.11-amzn"`) or a path. `module` is a Gradle
 path (`:api`), a Maven module (`:api`) or a bleep project. An IntelliJ run configuration, when
 you pick one, overrides profiles, env, main class and module and adds its VM/program args.

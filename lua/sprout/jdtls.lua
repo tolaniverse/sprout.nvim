@@ -6,6 +6,7 @@ local config = require("sprout.config")
 local idea = require("sprout.idea")
 local jdk = require("sprout.jdk")
 local project = require("sprout.project")
+local reload = require("sprout.reload")
 
 local M = {}
 
@@ -74,13 +75,19 @@ function M.base_settings()
         maven = { enabled = true },
         exclusions = { "**/node_modules/**", "**/.metadata/**", "**/archetype-resources/**", "**/META-INF/maven/**", "**/build/**", "**/target/**", "**/bin/**" },
       },
-      configuration = { updateBuildConfiguration = "automatic" },
       eclipse = { downloadSources = true },
       maven = { downloadSources = true },
       references = { includeDecompiledSources = true },
       contentProvider = { preferred = "fernflower" },
       signatureHelp = { enabled = true },
       completion = {
+        enabled = true,
+        postfix = { enabled = true }, -- `list.for`, `x.var`, `sysout`
+        -- Resolve imports/edits when an item is picked, not for every item listed.
+        lazyResolveTextEdit = { enabled = true },
+        maxResults = 100,
+        -- Keep AWT/Swing and JDK internals out of Spring code completion.
+        filteredTypes = { "java.awt.*", "javax.swing.*", "com.sun.*", "sun.*", "jdk.*", "org.graalvm.*", "io.micrometer.shaded.*" },
         favoriteStaticMembers = {
           "org.junit.jupiter.api.Assertions.*",
           "org.assertj.core.api.Assertions.*",
@@ -102,7 +109,7 @@ end
 function M.settings(root, base)
   local pj = jdk.resolve(root)
   local s = vim.tbl_deep_extend("force", base or M.base_settings(), {
-    java = { configuration = { runtimes = jdk.runtimes(pj) } },
+    java = { configuration = { runtimes = jdk.runtimes(pj), updateBuildConfiguration = reload.mode(root) } },
   })
   if pj then
     -- Gradle 9 itself needs 17+; the toolchain still compiles for the project JDK.
@@ -123,14 +130,14 @@ function M.config(bufnr)
   vim.list_extend(cmd, { "-configuration", ws .. "/config", "-data", ws .. "/workspace" })
   local settings = M.settings(root)
   local ok, blink = pcall(require, "blink.cmp")
-  return {
+  return reload.apply({
     name = "jdtls",
     cmd = cmd,
     root_dir = root,
     settings = settings,
     init_options = { settings = settings, bundles = M.bundles() },
     capabilities = ok and blink.get_lsp_capabilities() or nil,
-  }
+  })
 end
 
 --- Debug/test bundles from Mason, if installed.
@@ -167,6 +174,7 @@ function M.lazyvim_opts(opts)
       cfg.init_options = cfg.init_options or {}
       cfg.init_options.settings = cfg.settings
     end
+    reload.apply(cfg)
     if type(user) == "function" then
       return user(cfg) or cfg
     elseif type(user) == "table" then
