@@ -147,3 +147,7 @@ To cut a release: set `M.version` in `lua/sprout/init.lua`, move the `Unreleased
 `CHANGELOG.md` under the new version, commit, then `git tag vX.Y.Z && git push origin vX.Y.Z`.
 The release workflow checks that the tag matches `M.version` and publishes the GitHub release
 with that version's changelog section.
+
+## License
+
+[MIT](LICENSE)
