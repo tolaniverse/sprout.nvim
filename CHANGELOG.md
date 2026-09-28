@@ -5,6 +5,12 @@ versions: [semver](https://semver.org).
 
 ## [Unreleased]
 
+### Added
+
+- `:Sprout run` / `debug` find classes with a `main` method and offer them alongside the IntelliJ
+  run configurations; the picked class runs in its own module on Gradle, Maven and bleep. IntelliJ
+  Application configurations' main class is now honoured on Gradle too.
+
 ### Changed
 
 - `:Sprout stop` also closes the output pane (the output is kept; `:Sprout toggle` reopens it).

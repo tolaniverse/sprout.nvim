@@ -20,15 +20,28 @@ local last_rc = {}
 
 local SEP = "\31" -- unit separator: JVM args can contain spaces
 
--- Lets `bootRun`/`run` take JVM args from the environment, so nothing has to
--- be added to the project's build script.
+-- Lets `bootRun`/`run` take JVM args and a main class from the environment,
+-- and adds `sproutRun` to run any main class, so nothing has to be added to
+-- the project's build script.
 local INIT_SCRIPT = [[
 def sproutJvmArgs = System.getenv('SPROUT_JVM_ARGS')
-if (sproutJvmArgs) {
-  allprojects {
-    tasks.withType(JavaExec).configureEach { t ->
-      if (t.name == 'bootRun' || t.name == 'run') {
+def sproutMain = System.getenv('SPROUT_MAIN_CLASS')
+allprojects {
+  if (sproutMain) {
+    plugins.withId('java') {
+      tasks.register('sproutRun', JavaExec) { t ->
+        t.classpath = project.sourceSets.main.runtimeClasspath
+        t.standardInput = System.in
+      }
+    }
+  }
+  tasks.withType(JavaExec).configureEach { t ->
+    if (t.name == 'bootRun' || t.name == 'run' || t.name == 'sproutRun') {
+      if (sproutJvmArgs) {
         t.jvmArgs(sproutJvmArgs.split('\u001f') as List)
+      }
+      if (sproutMain) {
+        t.mainClass.set(sproutMain)
       }
     }
   }
@@ -67,6 +80,19 @@ local function module_from_idea(p, name)
   return name
 end
 
+--- A main class's module directory ("services/api") → Gradle path / Maven -pl / bleep project.
+local function module_from_dir(p, dir)
+  if dir == "" then
+    return nil
+  end
+  if p.tool == "gradle" then
+    return ":" .. dir:gsub("/", ":")
+  elseif p.tool == "maven" then
+    return dir
+  end
+  return vim.fs.basename(dir)
+end
+
 local function list(...)
   local out = {}
   for i = 1, select("#", ...) do
@@ -81,12 +107,18 @@ local function run_settings(p, rc)
   rc = rc or {}
   local env = s.envFile and idea.dotenv(p.root .. "/" .. s.envFile) or {}
   env = vim.tbl_extend("force", env, s.env or {}, rc.env or {})
+  local module = s.module
+  if rc.dir then -- a detected main class: its own module, even the root one
+    module = module_from_dir(p, rc.dir)
+  elseif rc.module then
+    module = module_from_idea(p, rc.module) or s.module
+  end
   return {
     profiles = rc.profiles or s.profiles,
     vmArgs = list(s.vmArgs or {}, rc.vmArgs or {}),
     args = list(s.args or {}, rc.args or {}),
     env = env,
-    module = module_from_idea(p, rc.module) or s.module,
+    module = module,
     main = rc.main,
   }
 end
@@ -131,13 +163,17 @@ local function command(p, action, rs)
       end
       return cmd, env
     end
-    local cmd = { p.exe, "--init-script", init_script(), gradle_task(rs.module, project.is_boot(p.root) and "bootRun" or "run") }
+    local task = project.is_boot(p.root) and "bootRun" or (rs.main and "sproutRun" or "run")
+    -- A bare `sproutRun` would run it in every subproject too.
+    local target = (task == "sproutRun" and not rs.module) and ":sproutRun" or gradle_task(rs.module, task)
+    local cmd = { p.exe, "--init-script", init_script(), target }
     if #rs.args > 0 then
       cmd[#cmd + 1] = "--args=" .. table.concat(rs.args, " ")
     end
     if #vm > 0 then
       env.SPROUT_JVM_ARGS = table.concat(vm, SEP)
     end
+    env.SPROUT_MAIN_CLASS = rs.main
     return cmd, env
   elseif p.tool == "maven" then
     local cmd = { p.exe }
@@ -150,6 +186,9 @@ local function command(p, action, rs)
     end
     if project.is_boot(p.root) then
       cmd[#cmd + 1] = "spring-boot:run"
+      if rs.main then
+        cmd[#cmd + 1] = "-Dspring-boot.run.main-class=" .. rs.main
+      end
       if #vm > 0 then
         cmd[#cmd + 1] = "-Dspring-boot.run.jvmArguments=" .. table.concat(vm, " ")
       end
@@ -177,7 +216,11 @@ local function command(p, action, rs)
     if action == "debug" then
       return nil, "debug isn't supported for bleep builds yet; use Metals' debug"
     end
-    return list({ p.exe, "run", rs.module or p.name }, #rs.args > 0 and list({ "--" }, rs.args) or {}), env
+    local cmd = { p.exe, "run", rs.module or p.name }
+    if rs.main then
+      vim.list_extend(cmd, { "--class", rs.main })
+    end
+    return list(cmd, #rs.args > 0 and list({ "--" }, rs.args) or {}), env
   end
 end
 
@@ -278,6 +321,18 @@ function M.run(debug, repick)
   with_project(function(p)
     local action = debug and "debug" or "run"
     local rcs = idea.run_configs(p.root)
+    -- Main classes found in the sources, unless a run configuration covers them.
+    local covered = {}
+    for _, rc in ipairs(rcs) do
+      if rc.main then
+        covered[rc.main] = true
+      end
+    end
+    for _, m in ipairs(project.mains(p.root)) do
+      if not covered[m.class] then
+        rcs[#rcs + 1] = { name = m.class, main = m.class, dir = m.dir }
+      end
+    end
     local function go(rc)
       if rc then
         last_rc[p.root] = rc.name
@@ -297,6 +352,9 @@ function M.run(debug, repick)
     vim.ui.select(rcs, {
       prompt = "Run configuration",
       format_item = function(rc)
+        if rc.dir then
+          return rc.name .. (rc.dir ~= "" and (" (" .. rc.dir .. ")") or "") .. " [main]"
+        end
         local prof = rc.profiles and (" [" .. table.concat(rc.profiles, ",") .. "]") or ""
         return rc.name .. prof
       end,

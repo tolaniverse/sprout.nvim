@@ -95,6 +95,61 @@ function M.is_boot(root)
   return boot[root]
 end
 
+---@class sprout.Main
+---@field class string fully qualified name
+---@field dir string module directory relative to the root ("" for the root module)
+
+local function package_of(file)
+  local fd = io.open(file, "r")
+  if not fd then
+    return nil
+  end
+  local pkg
+  for _ = 1, 100 do
+    local line = fd:read("*l")
+    if not line then
+      break
+    end
+    pkg = line:match("^%s*package%s+([%w_%.]+)")
+    if pkg then
+      break
+    end
+  end
+  fd:close()
+  return pkg
+end
+
+--- Classes with a `main` method outside test sources: Java `static void main(`
+--- and Kotlin top-level `fun main(`.
+---@return sprout.Main[]
+function M.mains(root)
+  local res = vim.system({
+    "rg", "--files-with-matches", "--no-messages",
+    "--glob", "*.java", "--glob", "*.kt",
+    "--glob", "!**/src/test/**", "--glob", "!**/build/**", "--glob", "!**/target/**",
+    "--glob", "!**/node_modules/**", "--glob", "!**/.bleep/**",
+    "-e", [[static\s+void\s+main\s*\(]], "-e", [[^fun\s+main\s*\(]],
+    root,
+  }, { text = true }):wait()
+  local out = {}
+  for file in (res.stdout or ""):gmatch("[^\n]+") do
+    local name, ext = vim.fs.basename(file):match("^(.+)%.(%w+)$")
+    if ext == "kt" then
+      name = name .. "Kt" -- the class Kotlin generates for top-level functions
+    end
+    local pkg = package_of(file)
+    local rel = file:sub(#root + 2)
+    out[#out + 1] = {
+      class = pkg and (pkg .. "." .. name) or name,
+      dir = rel:match("^(.-)/?src/") or "",
+    }
+  end
+  table.sort(out, function(a, b)
+    return a.class < b.class
+  end)
+  return out
+end
+
 ---@return sprout.Project?
 function M.current()
   return M.get(M.root())

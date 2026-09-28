@@ -87,7 +87,7 @@ Without LazyVim, install `mfussenegger/nvim-jdtls` and call
 
 | `:Sprout …`   |                                                                  |
 | ------------- | ---------------------------------------------------------------- |
-| `run[!]`      | Run the app (`bootRun` / `spring-boot:run` / `bleep run`). `!` re-picks the run configuration |
+| `run[!]`      | Run the app (`bootRun` / `spring-boot:run` / `bleep run`). `!` re-picks the run configuration or main class |
 | `debug[!]`    | Same, with JDWP on port 5005, and attaches nvim-dap once it's listening |
 | `attach`      | Attach nvim-dap to port 5005                                     |
 | `stop` / `restart` / `toggle` | Control the output terminal (`stop` also closes it) |
@@ -128,6 +128,10 @@ Everything is optional:
 `jdk` takes a major (`"21"`), an SDKMAN id (`"21.0.11-amzn"`) or a path. `module` is a Gradle
 path (`:api`), a Maven module (`:api`) or a bleep project. An IntelliJ run configuration, when
 you pick one, overrides profiles, env, main class and module and adds its VM/program args.
+
+Classes with a `main` method (Java `static void main(`, Kotlin top-level `fun main(`, outside
+`src/test`) are offered next to the run configurations, run in their own module. On Gradle a
+non-Boot main class runs through a `sproutRun` task added by sprout's init script.
 
 The file also pins the project root, which is useful in monorepos.
 
