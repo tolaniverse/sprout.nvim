@@ -90,7 +90,7 @@ Without LazyVim, install `mfussenegger/nvim-jdtls` and call
 | `run[!]`      | Run the app (`bootRun` / `spring-boot:run` / `bleep run`). `!` re-picks the run configuration |
 | `debug[!]`    | Same, with JDWP on port 5005, and attaches nvim-dap once it's listening |
 | `attach`      | Attach nvim-dap to port 5005                                     |
-| `stop` / `restart` / `toggle` | Control the output terminal                      |
+| `stop` / `restart` / `toggle` | Control the output terminal (`stop` also closes it) |
 | `build` / `test` / `clean` | Through the build tool                              |
 | `exec <args>` | Run the wrapper with raw args, e.g. `:Sprout exec dependencies`  |
 | `endpoints`   | Pick an HTTP endpoint                                            |

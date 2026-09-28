@@ -5,6 +5,10 @@ versions: [semver](https://semver.org).
 
 ## [Unreleased]
 
+### Changed
+
+- `:Sprout stop` also closes the output pane (the output is kept; `:Sprout toggle` reopens it).
+
 ## [0.2.1] - 2026-09-27
 
 ### Fixed

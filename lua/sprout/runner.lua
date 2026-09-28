@@ -335,14 +335,25 @@ function M.restart()
   end)
 end
 
+--- `quiet` is set when relaunching, which keeps the pane open for the next task.
 function M.stop(root, quiet)
   root = root or project.root()
   local t = root and tasks[root]
-  if t and t.job then
+  local was_running = t and t.job
+  if was_running then
     vim.fn.jobstop(t.job)
     vim.fn.jobwait({ t.job }, 3000)
     t.job = nil
-  elseif not quiet then
+  end
+  if quiet then
+    return
+  end
+  -- The output buffer is kept, so :Sprout toggle can bring it back.
+  if t and t.win and vim.api.nvim_win_is_valid(t.win) then
+    if pcall(vim.api.nvim_win_close, t.win, false) then -- fails if it's the last window
+      t.win = nil
+    end
+  elseif not was_running then
     vim.notify("sprout: nothing running", vim.log.levels.INFO)
   end
 end
