@@ -133,7 +133,9 @@ local function build_file_major(root)
     local v = gradle:match("JavaLanguageVersion%.of%(%s*([%d%.]+)")
       or gradle:match("jvmToolchain%(%s*([%d%.]+)")
       or gradle:match("JavaVersion%.VERSION_([%d_]+)")
+      or gradle:match("JvmTarget%.JVM_([%d_]+)")
       or gradle:match("sourceCompatibility%s*=%s*['\"]?([%d%.]+)")
+      or gradle:match("jvmTarget%s*=%s*['\"]([%d%.]+)")
     if v then
       return major_of(v:gsub("_", "."))
     end
@@ -145,6 +147,8 @@ local function build_file_major(root)
         or pom:match("<maven%.compiler%.release>%s*([%d%.]+)")
         or pom:match("<release>%s*([%d%.]+)%s*</release>")
         or pom:match("<maven%.compiler%.source>%s*([%d%.]+)")
+        or pom:match("<kotlin%.compiler%.jvmTarget>%s*([%d%.]+)")
+        or pom:match("<jvmTarget>%s*([%d%.]+)%s*</jvmTarget>")
     )
   end
 end

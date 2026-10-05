@@ -11,8 +11,21 @@ versions: [semver](https://semver.org).
   run configurations; the picked class runs in its own module on Gradle, Maven and bleep. IntelliJ
   Application configurations' main class is now honoured on Gradle too.
 
+- Ktor support: routes from the routing DSL (nested `route` blocks, `webSocket`/`sse`,
+  type-safe `get<Resource>` resolved through `@Resource` classes) show up in `:Sprout endpoints`;
+  `:Sprout run`/`debug` use the `run` task with Ktor development mode on (`ktor.development`);
+  Maven projects whose `exec-maven-plugin` sets a `<mainClass>` run without picking one;
+  `:Sprout config` lists `application*.conf`.
+- Kotlin: `:Sprout debug`/`attach` use Mason's `kotlin-debug-adapter` in projects with Kotlin
+  sources (`run.debug_adapter` overrides); `suspend fun main` and `@file:JvmName` are honoured
+  when finding main classes; the project JDK is also read from Kotlin's `jvmTarget`.
+- `:Sprout info` shows the stack (Spring Boot, Ktor, Kotlin/Java); `:checkhealth sprout` checks
+  for kotlin-debug-adapter.
+
 ### Changed
 
+- A main class picked from the root module of a multi-project Gradle build runs in the root
+  project only (`:run`), not in every subproject.
 - `:Sprout stop` also closes the output pane (the output is kept; `:Sprout toggle` reopens it).
 
 ## [0.2.1] - 2026-09-27

@@ -133,6 +133,16 @@ local function env_for(p, extra)
   return env
 end
 
+local function pom_has_exec_main(root)
+  local fd = io.open(root .. "/pom.xml", "r")
+  if not fd then
+    return false
+  end
+  local pom = fd:read("*a")
+  fd:close()
+  return pom:find("exec-maven-plugin", 1, true) ~= nil and pom:find("<mainClass>", 1, true) ~= nil
+end
+
 local function gradle_task(mod, task)
   if not mod then
     return task
@@ -149,6 +159,9 @@ local function command(p, action, rs)
   if action == "debug" then
     vm[#vm + 1] = jdwp
   end
+  if (action == "run" or action == "debug") and config.ktor.development and project.is_ktor(p.root) then
+    vm[#vm + 1] = "-Dio.ktor.development=true"
+  end
   local env = vim.deepcopy(rs.env or {})
   if rs.profiles and #rs.profiles > 0 then
     env.SPRING_PROFILES_ACTIVE = table.concat(rs.profiles, ",")
@@ -163,9 +176,18 @@ local function command(p, action, rs)
       end
       return cmd, env
     end
-    local task = project.is_boot(p.root) and "bootRun" or (rs.main and "sproutRun" or "run")
-    -- A bare `sproutRun` would run it in every subproject too.
-    local target = (task == "sproutRun" and not rs.module) and ":sproutRun" or gradle_task(rs.module, task)
+    local task = "run"
+    if project.is_boot(p.root) then
+      task = "bootRun"
+    elseif rs.main and not project.uses(p.root, "io.ktor.plugin") then
+      -- Ktor's Gradle plugin brings `application`, whose `run` keeps the
+      -- build's applicationDefaultJvmArgs; elsewhere `run` may not exist.
+      task = "sproutRun"
+    end
+    -- A bare task would run in every subproject too; a main class in the
+    -- root module runs in the root project only.
+    local root_only = rs.main and not rs.module and task ~= "bootRun"
+    local target = root_only and (":" .. task) or gradle_task(rs.module, task)
     local cmd = { p.exe, "--init-script", init_script(), target }
     if #rs.args > 0 then
       cmd[#cmd + 1] = "--args=" .. table.concat(rs.args, " ")
@@ -196,10 +218,15 @@ local function command(p, action, rs)
         cmd[#cmd + 1] = "-Dspring-boot.run.arguments=" .. table.concat(rs.args, " ")
       end
     else
-      if not rs.main then
-        return nil, "no main class: add an IntelliJ Application run configuration"
+      -- Without a picked main class, exec:java can still use the pom's own
+      -- <mainClass> (Ktor's Maven template sets one).
+      if not rs.main and not pom_has_exec_main(p.root) then
+        return nil, "no main class: add a main function or an IntelliJ Application run configuration"
       end
-      vim.list_extend(cmd, { "compile", "exec:java", "-Dexec.mainClass=" .. rs.main })
+      vim.list_extend(cmd, { "compile", "exec:java" })
+      if rs.main then
+        cmd[#cmd + 1] = "-Dexec.mainClass=" .. rs.main
+      end
       if #rs.args > 0 then
         cmd[#cmd + 1] = "-Dexec.args=" .. table.concat(rs.args, " ")
       end
@@ -224,9 +251,52 @@ local function command(p, action, rs)
   end
 end
 
-local function attach_debugger(port)
+--- Registers Mason's kotlin-debug-adapter unless something (LazyVim's
+--- kotlin extra) already did. Returns whether a kotlin adapter exists.
+local function kotlin_adapter(dap)
+  if dap.adapters.kotlin then
+    return true
+  end
+  local exe = vim.fn.exepath("kotlin-debug-adapter")
+  if exe == "" then
+    exe = vim.fn.stdpath("data") .. "/mason/bin/kotlin-debug-adapter"
+    if vim.fn.executable(exe) == 0 then
+      return false
+    end
+  end
+  dap.adapters.kotlin = {
+    type = "executable",
+    command = exe,
+    args = { "--interpreter=vscode" },
+    options = { initialize_timeout_sec = 20 }, -- it resolves the classpath first
+  }
+  return true
+end
+
+local function attach_debugger(root, port)
   local ok, dap = pcall(require, "dap")
-  if not ok or not dap.adapters.java then
+  if not ok then
+    return vim.notify("sprout: nvim-dap is not installed", vim.log.levels.WARN)
+  end
+  local want = config.run.debug_adapter
+  if want == nil then
+    want = (root and project.has_kotlin(root) and kotlin_adapter(dap)) and "kotlin" or "java"
+  end
+  if want == "kotlin" then
+    if not kotlin_adapter(dap) then
+      return vim.notify("sprout: kotlin-debug-adapter not found: `:MasonInstall kotlin-debug-adapter`", vim.log.levels.WARN)
+    end
+    return dap.run({
+      type = "kotlin",
+      request = "attach",
+      name = "sprout attach",
+      projectRoot = root or vim.uv.cwd(),
+      hostName = "127.0.0.1",
+      port = port,
+      timeout = 10000,
+    })
+  end
+  if not dap.adapters.java then
     return vim.notify(
       "sprout: the java debug adapter isn't registered yet; open a Java file so jdtls starts, then :Sprout attach",
       vim.log.levels.WARN
@@ -276,7 +346,7 @@ local function launch(p, cmd, env, spec)
           if line:find("Listening for transport dt_socket", 1, true) then
             attached = true
             vim.schedule(function()
-              attach_debugger(port)
+              attach_debugger(p.root, port)
             end)
             return
           end
@@ -432,7 +502,7 @@ function M.toggle()
 end
 
 function M.attach()
-  attach_debugger(config.run.debug_port)
+  attach_debugger(project.root(), config.run.debug_port)
 end
 
 -- Exposed for :Sprout info and tests.

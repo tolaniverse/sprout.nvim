@@ -1,6 +1,6 @@
 # sprout.nvim
 
-Spring Boot and JVM projects in Neovim, without Eclipse files in your repo.
+Spring Boot, Ktor and JVM (Java and Kotlin) projects in Neovim, without Eclipse files in your repo.
 
 - **No clutter**: jdtls keeps `.project`, `.classpath`, `.settings/` and `.factorypath` in
   `stdpath("cache")/sprout/jdtls/<project>-<hash>`. Your project gets nothing new except
@@ -9,7 +9,7 @@ Spring Boot and JVM projects in Neovim, without Eclipse files in your repo.
   (project JDK) and its Spring Boot / Application run configurations.
 - **Right JDK per project** (SDKMAN, `/Library/Java`, `JAVA_HOME`), in this order:
   `.idea/sprout.json` → `.sdkmanrc` → `.idea/misc.xml` → build file (toolchain,
-  `java.version`, …) → SDKMAN `current`. jdtls itself always runs on JDK 21+.
+  `java.version`, Kotlin `jvmTarget`, …) → SDKMAN `current`. jdtls itself always runs on JDK 21+.
 - **Lombok** out of the box (Mason's jar).
 - **Build file changed → "Reload classpath?"**: save `pom.xml`, `build.gradle(.kts)` or
   `libs.versions.toml` (or `git pull` a change) and you're asked, like IntelliJ. Choose
@@ -31,7 +31,14 @@ Spring Boot and JVM projects in Neovim, without Eclipse files in your repo.
 - **Run / debug / build / test** via `gradlew`, `mvnw` or `bleep`, on the project JDK, with
   profiles, env, `.env` and JVM args. Debug starts the app with JDWP and attaches nvim-dap.
 - **Endpoints picker**: every `@GetMapping`/`@PostMapping`/… in Java and Kotlin, with the
-  class-level `@RequestMapping` prefix included.
+  class-level `@RequestMapping` prefix included, and every Ktor route (`get("/x")`, `post { }`,
+  `webSocket`, type-safe `get<Articles>`) with the paths of its enclosing `route("/api") { }`
+  blocks and `@Resource` classes.
+- **Ktor**: `:Sprout run` uses the `application` plugin's `run` task (Gradle) or `exec:java`
+  (Maven) with Ktor's development mode on; `:Sprout config` lists `application.conf` too.
+- **Kotlin**: top-level `fun main` (including `suspend` and `@file:JvmName`) is found for
+  run/debug, and `:Sprout debug` attaches Mason's `kotlin-debug-adapter` in Kotlin projects,
+  so breakpoints in `.kt` files work.
 - **Small**: ~1.5k lines of Lua, no background work until you open a Java file or run a command.
 
 ## Install (LazyVim)
@@ -46,7 +53,7 @@ return {
     "tolaniverse/sprout.nvim",
     version = "*", -- latest release; drop it to follow main
     cmd = "Sprout",
-    ft = { "java", "yaml", "jproperties" },
+    ft = { "java", "kotlin", "yaml", "jproperties" },
     opts = {},
     keys = {
       { "<leader>jr", "<cmd>Sprout run<cr>", desc = "Run app" },
@@ -58,7 +65,7 @@ return {
       { "<leader>jt", "<cmd>Sprout test<cr>", desc = "Test (build tool)" },
       { "<leader>jo", "<cmd>Sprout toggle<cr>", desc = "Toggle output" },
       { "<leader>je", "<cmd>Sprout endpoints<cr>", desc = "Endpoints" },
-      { "<leader>jc", "<cmd>Sprout config<cr>", desc = "Spring config files" },
+      { "<leader>jc", "<cmd>Sprout config<cr>", desc = "Config files" },
       { "<leader>ji", "<cmd>Sprout info<cr>", desc = "Project info" },
       { "<leader>jk", "<cmd>Sprout jdk<cr>", desc = "Pick project JDK" },
       { "<leader>ju", "<cmd>Sprout reload<cr>", desc = "Reload build config" },
@@ -88,14 +95,14 @@ Without LazyVim, install `mfussenegger/nvim-jdtls` and call
 | `:Sprout …`   |                                                                  |
 | ------------- | ---------------------------------------------------------------- |
 | `run[!]`      | Run the app (`bootRun` / `spring-boot:run` / `bleep run`). `!` re-picks the run configuration or main class |
-| `debug[!]`    | Same, with JDWP on port 5005, and attaches nvim-dap once it's listening |
+| `debug[!]`    | Same, with JDWP on port 5005, and attaches nvim-dap once it's listening (java-debug, or kotlin-debug-adapter in Kotlin projects) |
 | `attach`      | Attach nvim-dap to port 5005                                     |
 | `stop` / `restart` / `toggle` | Control the output terminal (`stop` also closes it) |
 | `build` / `test` / `clean` | Through the build tool                              |
 | `exec <args>` | Run the wrapper with raw args, e.g. `:Sprout exec dependencies`  |
 | `endpoints`   | Pick an HTTP endpoint                                            |
 | `datasource`  | Add `spring.datasource` (+ `spring.jpa`) for the driver in your build |
-| `config`      | Pick an `application*.yml/properties`                            |
+| `config`      | Pick an `application*.yml/properties/conf`                       |
 | `reload`      | Re-import Gradle/Maven now (every build file in the project)     |
 | `jdk`         | Pick the project JDK (saved to `.idea/sprout.json`)              |
 | `init`        | Create/open `.idea/sprout.json`                                  |
@@ -149,8 +156,15 @@ The file also pins the project root, which is useful in monorepos.
   uses about 1 GB of heap at most. Property completion that depends on your classpath starts once
   jdtls has imported the project, which requires opening a Java file. Turn it off with
   `opts = { spring_ls = { enabled = false } }`.
-- Kotlin: run/build/test/endpoints/JDK all work. Kotlin language support comes from LazyVim's
-  `lang.kotlin` extra, not jdtls.
+- Kotlin: language support comes from LazyVim's `lang.kotlin` extra, not jdtls. To run its
+  server on the project JDK, give it `cmd_env = { JAVA_HOME = require("sprout").java_home() }`.
+  Debugging needs `:MasonInstall kotlin-debug-adapter` (the `lang.kotlin` extra registers it
+  too). In projects with Kotlin sources sprout uses it automatically; set
+  `opts = { run = { debug_adapter = "java" } }` to use java-debug instead, e.g. in a mostly-Java
+  project.
+- Ktor: development mode (`-Dio.ktor.development=true`) is on for `run`/`debug`; turn it off
+  with `opts = { ktor = { development = false } }`. For auto-reload, run `./gradlew -t build` in
+  another terminal, as Ktor's docs describe.
 - bleep: Java inside bleep builds is served by Metals over BSP. sprout handles run/compile/test.
 
 ## Versioning

@@ -28,6 +28,15 @@ local defaults = {
     -- Terminal height for run/build output.
     height = 15,
     debug_port = 5005,
+    -- nvim-dap adapter for :Sprout debug/attach: "java" (java-debug, via
+    -- jdtls) or "kotlin" (Mason's kotlin-debug-adapter). nil = "kotlin" in
+    -- projects with Kotlin sources when that adapter is installed.
+    debug_adapter = nil,
+  },
+  ktor = {
+    -- Run Ktor apps with -Dio.ktor.development=true (detailed errors, and
+    -- auto-reload when you also run a continuous build).
+    development = true,
   },
 }
 

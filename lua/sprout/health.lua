@@ -44,6 +44,13 @@ function M.check()
   else
     h.warn("Spring Boot language server not installed: `:MasonInstall vscode-spring-boot-tools`")
   end
+  if vim.fn.executable("kotlin-debug-adapter") == 1
+    or vim.fn.executable(vim.fn.stdpath("data") .. "/mason/bin/kotlin-debug-adapter") == 1
+  then
+    h.ok("kotlin-debug-adapter found (debugging Kotlin projects)")
+  else
+    h.info("kotlin-debug-adapter not installed; needed to debug Kotlin code: `:MasonInstall kotlin-debug-adapter`")
+  end
   for _, exe in ipairs({ "rg", "bleep", "gradle", "mvn" }) do
     if vim.fn.executable(exe) == 1 then
       h.ok(exe .. " found")

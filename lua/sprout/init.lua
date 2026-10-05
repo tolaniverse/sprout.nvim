@@ -24,6 +24,20 @@ function M.java_home(root)
   return j and j.home
 end
 
+--- "Spring Boot", "Ktor", "Kotlin": what the project is built with.
+local function stack(root)
+  local project = require("sprout.project")
+  local out = {}
+  if project.is_boot(root) then
+    out[#out + 1] = "Spring Boot"
+  end
+  if project.is_ktor(root) then
+    out[#out + 1] = "Ktor"
+  end
+  out[#out + 1] = project.has_kotlin(root) and "Kotlin" or "Java"
+  return out
+end
+
 function M.info()
   local project = require("sprout.project")
   local p = project.current()
@@ -42,6 +56,7 @@ function M.info()
     "",
     ("- **root** `%s`"):format(vim.fn.fnamemodify(p.root, ":~")),
     ("- **build** %s (`%s`)"):format(p.tool, vim.fn.fnamemodify(p.exe, ":~:.")),
+    ("- **stack** %s"):format(table.concat(stack(p.root), ", ")),
     ("- **project JDK** %s"):format(j and ("%s `%s` — from %s"):format(j.version, j.id, j.source) or "none found"),
     ("- **jdtls JDK** %s"):format(runner_jdk and runner_jdk.version or "none ≥ " .. config.jdtls.java),
     ("- **lombok** `%s`"):format(jdtls.lombok() and vim.fn.fnamemodify(jdtls.lombok(), ":~") or "not found"),
