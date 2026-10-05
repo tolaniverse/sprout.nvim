@@ -5,6 +5,8 @@ versions: [semver](https://semver.org).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-05
+
 ### Added
 
 - `:Sprout run` / `debug` find classes with a `main` method and offer them alongside the IntelliJ
@@ -84,7 +86,8 @@ versions: [semver](https://semver.org).
   `:checkhealth sprout`.
 - LazyVim integration through the java extra's nvim-jdtls options.
 
-[Unreleased]: https://github.com/tolaniverse/sprout.nvim/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/tolaniverse/sprout.nvim/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/tolaniverse/sprout.nvim/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/tolaniverse/sprout.nvim/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/tolaniverse/sprout.nvim/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/tolaniverse/sprout.nvim/releases/tag/v0.1.0
