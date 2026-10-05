@@ -28,7 +28,8 @@ Spring Boot, Ktor and JVM (Java and Kotlin) projects in Neovim, without Eclipse 
   `${DB_URL:jdbc:postgresql://localhost:5432/app}`-style placeholders.
 - **Completion tuned for Spring**: postfix templates, lazily resolved auto-imports, JUnit/
   AssertJ/Mockito/MockMvc static members, AWT/Swing/JDK internals filtered out.
-- **Run / debug / build / test** via `gradlew`, `mvnw` or `bleep`, on the project JDK, with
+- **Run / debug / build / test** via `gradlew`, `mvnw`, `bleep` or the Kotlin Toolchain's
+  `kotlin` CLI (projects from `kotlin init`), on the project JDK, with
   profiles, env, `.env` and JVM args. Debug starts the app with JDWP and attaches nvim-dap.
 - **Endpoints picker**: every `@GetMapping`/`@PostMapping`/… in Java and Kotlin, with the
   class-level `@RequestMapping` prefix included, and every Ktor route (`get("/x")`, `post { }`,
@@ -94,7 +95,7 @@ Without LazyVim, install `mfussenegger/nvim-jdtls` and call
 
 | `:Sprout …`   |                                                                  |
 | ------------- | ---------------------------------------------------------------- |
-| `run[!]`      | Run the app (`bootRun` / `spring-boot:run` / `bleep run`). `!` re-picks the run configuration or main class |
+| `run[!]`      | Run the app (`bootRun` / `spring-boot:run` / `bleep run` / `kotlin run`). `!` re-picks the run configuration or main class |
 | `debug[!]`    | Same, with JDWP on port 5005, and attaches nvim-dap once it's listening (java-debug, or kotlin-debug-adapter in Kotlin projects) |
 | `attach`      | Attach nvim-dap to port 5005                                     |
 | `stop` / `restart` / `toggle` | Control the output terminal (`stop` also closes it) |
@@ -133,7 +134,7 @@ Everything is optional:
 
 `reload` is `ask` (default), `auto` or `never`: what happens when a build file changes.
 `jdk` takes a major (`"21"`), an SDKMAN id (`"21.0.11-amzn"`) or a path. `module` is a Gradle
-path (`:api`), a Maven module (`:api`) or a bleep project. An IntelliJ run configuration, when
+path (`:api`), a Maven module (`:api`), a bleep project or a Kotlin Toolchain module (`api`). An IntelliJ run configuration, when
 you pick one, overrides profiles, env, main class and module and adds its VM/program args.
 
 Classes with a `main` method (Java `static void main(`, Kotlin top-level `fun main(`, outside
@@ -165,6 +166,12 @@ The file also pins the project root, which is useful in monorepos.
 - Ktor: development mode (`-Dio.ktor.development=true`) is on for `run`/`debug`; turn it off
   with `opts = { ktor = { development = false } }`. For auto-reload, run `./gradlew -t build` in
   another terminal, as Ktor's docs describe.
+- Kotlin Toolchain (`kotlin init`, formerly Amper): projects are found by `project.yaml` or a
+  `module.yaml` with a `product:`, and run through the `./kotlin` wrapper (`kotlin run -m <module>
+  --main-class … --jvm-args …`). `ktor: enabled` / `springBoot: enabled` turn on the Ktor and
+  Spring features, and `settings.jvm.jdk.version` sets the project JDK. jdtls can't import these
+  projects, so Java files there get no classpath, and the Spring Boot language server isn't
+  started.
 - bleep: Java inside bleep builds is served by Metals over BSP. sprout handles run/compile/test.
 
 ## Versioning

@@ -140,6 +140,18 @@ local function build_file_major(root)
       return major_of(v:gsub("_", "."))
     end
   end
+  -- Kotlin Toolchain: settings.jvm.jdk.version, else settings.jvm.release.
+  local modules = { root .. "/module.yaml", root .. "/project.yaml" }
+  vim.list_extend(modules, vim.fn.glob(root .. "/*/module.yaml", false, true))
+  vim.list_extend(modules, vim.fn.glob(root .. "/*/*/module.yaml", false, true))
+  for _, f in ipairs(modules) do
+    local module = read(f)
+    local v = module
+      and (module:match("\n%s*jdk:%s*\n%s*version:%s*['\"]?(%d+)") or module:match("\n%s*release:%s*['\"]?([%d%.]+)"))
+    if v then
+      return major_of(v)
+    end
+  end
   local pom = read(root .. "/pom.xml")
   if pom then
     return major_of(

@@ -45,7 +45,12 @@ function M.bundles()
 end
 
 function M.wanted(root)
-  return config.spring_ls.enabled and root ~= nil and M.jar() ~= nil and project.is_boot(root)
+  -- It gets the classpath from jdtls, which can't import Kotlin Toolchain projects.
+  return config.spring_ls.enabled
+    and root ~= nil
+    and M.jar() ~= nil
+    and project.is_boot(root)
+    and project.get(root).tool ~= "kotlin"
 end
 
 -- The server keys features off VS Code language ids, not Neovim filetypes.

@@ -80,7 +80,8 @@ local function module_from_idea(p, name)
   return name
 end
 
---- A main class's module directory ("services/api") → Gradle path / Maven -pl / bleep project.
+--- A main class's module directory ("services/api") → Gradle path / Maven -pl /
+--- bleep project / Kotlin Toolchain module (named after its directory).
 local function module_from_dir(p, dir)
   if dir == "" then
     return nil
@@ -235,6 +236,22 @@ local function command(p, action, rs)
       end
     end
     return cmd, env
+  elseif p.tool == "kotlin" then
+    local mod = rs.module and { "-m", (rs.module:gsub("^:", "")) } or {}
+    if action == "build" or action == "clean" then
+      return list({ p.exe, action }, action == "build" and mod or {}), env
+    elseif action == "test" then
+      return list({ p.exe, "test" }, rs.module and { "--include-module", (rs.module:gsub("^:", "")) } or {}), env
+    end
+    local cmd = list({ p.exe, "run" }, mod)
+    if rs.main then
+      cmd[#cmd + 1] = "--main-class=" .. rs.main
+    end
+    -- One flag per argument: the CLI splits each value on spaces.
+    for _, a in ipairs(vm) do
+      cmd[#cmd + 1] = "--jvm-args=" .. a
+    end
+    return list(cmd, #rs.args > 0 and list({ "--" }, rs.args) or {}), env
   else -- bleep
     local verbs = { build = "compile", test = "test", clean = "clean" }
     if verbs[action] then
@@ -380,7 +397,7 @@ end
 local function with_project(fn)
   local p = project.current()
   if not p then
-    return vim.notify("sprout: no Gradle, Maven or bleep project here", vim.log.levels.WARN)
+    return vim.notify("sprout: no Gradle, Maven, Kotlin Toolchain or bleep project here", vim.log.levels.WARN)
   end
   return fn(p)
 end
@@ -398,7 +415,7 @@ function M.run(debug, repick)
         covered[rc.main] = true
       end
     end
-    for _, m in ipairs(project.mains(p.root)) do
+    for _, m in ipairs(project.mains(p.root, p.tool)) do
       if not covered[m.class] then
         rcs[#rcs + 1] = { name = m.class, main = m.class, dir = m.dir }
       end

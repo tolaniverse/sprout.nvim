@@ -42,7 +42,7 @@ function M.info()
   local project = require("sprout.project")
   local p = project.current()
   if not p then
-    return vim.notify("sprout: no Gradle, Maven or bleep project here", vim.log.levels.WARN)
+    return vim.notify("sprout: no Gradle, Maven, Kotlin Toolchain or bleep project here", vim.log.levels.WARN)
   end
   local jdk = require("sprout.jdk")
   local jdtls = require("sprout.jdtls")

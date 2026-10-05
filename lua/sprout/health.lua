@@ -51,7 +51,7 @@ function M.check()
   else
     h.info("kotlin-debug-adapter not installed; needed to debug Kotlin code: `:MasonInstall kotlin-debug-adapter`")
   end
-  for _, exe in ipairs({ "rg", "bleep", "gradle", "mvn" }) do
+  for _, exe in ipairs({ "rg", "bleep", "gradle", "mvn", "kotlin" }) do
     if vim.fn.executable(exe) == 1 then
       h.ok(exe .. " found")
     else

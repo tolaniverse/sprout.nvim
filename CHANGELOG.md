@@ -19,6 +19,10 @@ versions: [semver](https://semver.org).
 - Kotlin: `:Sprout debug`/`attach` use Mason's `kotlin-debug-adapter` in projects with Kotlin
   sources (`run.debug_adapter` overrides); `suspend fun main` and `@file:JvmName` are honoured
   when finding main classes; the project JDK is also read from Kotlin's `jvmTarget`.
+- Kotlin Toolchain (`kotlin init`, formerly Amper) projects: found by `project.yaml` /
+  `module.yaml`, and run/debug/build/test/clean go through the `./kotlin` wrapper (modules,
+  main class, JVM args and app args included). Ktor and Spring Boot are detected from
+  `ktor: enabled` / `springBoot: enabled`, and the project JDK from `settings.jvm.jdk.version`.
 - `:Sprout info` shows the stack (Spring Boot, Ktor, Kotlin/Java); `:checkhealth sprout` checks
   for kotlin-debug-adapter.
 
