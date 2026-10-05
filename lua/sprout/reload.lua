@@ -157,7 +157,12 @@ end
 
 --- :Sprout reload
 function M.reload()
-  local root = require("sprout.project").root()
+  local project = require("sprout.project")
+  local root = project.root()
+  local p = project.get(root)
+  if p and p.tool == "kotlin" then
+    return require("sprout.toolchain").refresh(root, true)
+  end
   for _, client in ipairs(vim.lsp.get_clients({ name = "jdtls" })) do
     if client.root_dir == root then
       return M.update(client)

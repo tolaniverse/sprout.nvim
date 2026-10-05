@@ -248,8 +248,16 @@ vim.api.nvim_create_autocmd("BufWritePost", {
   pattern = { "pom.xml", "*.gradle", "*.gradle.kts", "libs.versions.toml", "bleep.yaml", "module.yaml", "project.yaml" },
   callback = function(ev)
     local root = M.root(ev.file)
-    if root then
-      M.invalidate(root)
+    if not root then
+      return
+    end
+    M.invalidate(root)
+    -- jdtls can't watch a Kotlin Toolchain build, so re-resolve for it.
+    local p = M.get(root)
+    if p.tool == "kotlin" and #vim.lsp.get_clients({ name = "jdtls" }) > 0 then
+      if require("sprout.reload").mode(root) ~= "disabled" then
+        require("sprout.toolchain").refresh(root)
+      end
     end
   end,
 })

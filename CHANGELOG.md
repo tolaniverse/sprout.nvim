@@ -23,6 +23,10 @@ versions: [semver](https://semver.org).
   `module.yaml`, and run/debug/build/test/clean go through the `./kotlin` wrapper (modules,
   main class, JVM args and app args included). Ktor and Spring Boot are detected from
   `ktor: enabled` / `springBoot: enabled`, and the project JDK from `settings.jvm.jdk.version`.
+- jdtls works in Kotlin Toolchain projects: sprout resolves the dependencies with
+  `kotlin show dependencies` and hands jdtls the jars and module source folders, so Java files
+  get library completion and diagnostics. Re-resolved when a `module.yaml` is saved and on
+  `:Sprout reload`; `:Sprout info` shows the jar count.
 - `:Sprout info` shows the stack (Spring Boot, Ktor, Kotlin/Java); `:checkhealth sprout` checks
   for kotlin-debug-adapter.
 

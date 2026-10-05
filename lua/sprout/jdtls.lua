@@ -116,7 +116,22 @@ function M.settings(root, base)
     local gradle_jvm = pj.major >= 17 and pj or jdk.find(21, true)
     s.java.import.gradle.java = { home = gradle_jvm and gradle_jvm.home }
   end
+  local p = project.get(root)
+  if p and p.tool == "kotlin" then
+    s = vim.tbl_deep_extend("force", s, require("sprout.toolchain").jdtls_settings(root))
+  end
   return vim.tbl_deep_extend("force", s, idea.settings(root).jdtls or {})
+end
+
+--- Kotlin Toolchain projects: resolve dependencies once jdtls starts, if the
+--- saved classpath is missing or older than module.yaml.
+local function resolve_toolchain(root)
+  local p = root and project.get(root)
+  if p and p.tool == "kotlin" then
+    vim.schedule(function()
+      require("sprout.toolchain").refresh(root)
+    end)
+  end
 end
 
 --- Complete config for `require("jdtls").start_or_attach` in standalone mode.
@@ -129,6 +144,7 @@ function M.config(bufnr)
   local cmd = M.cmd()
   vim.list_extend(cmd, { "-configuration", ws .. "/config", "-data", ws .. "/workspace" })
   local settings = M.settings(root)
+  resolve_toolchain(root)
   local ok, blink = pcall(require, "blink.cmp")
   return require("sprout.spring_ls").track_ready(reload.apply({
     name = "jdtls",
@@ -184,6 +200,7 @@ function M.lazyvim_opts(opts)
         return not b:find("jar%-with%-dependencies%.jar$") and not b:find("jacocoagent%.jar$")
       end, cfg.init_options.bundles or {})
       cfg.init_options.bundles = bundles
+      resolve_toolchain(cfg.root_dir)
     end
     reload.apply(cfg)
     require("sprout.spring_ls").track_ready(cfg)

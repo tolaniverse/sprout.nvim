@@ -33,6 +33,12 @@ local defaults = {
     -- projects with Kotlin sources when that adapter is installed.
     debug_adapter = nil,
   },
+  kotlin_toolchain = {
+    -- The toolchain's shared cache, where it keeps dependency jars. nil = its
+    -- default (~/Library/Caches/JetBrains/Kotlin on macOS). Set it if you pass
+    -- --shared-cache-dir.
+    cache_dir = nil,
+  },
   ktor = {
     -- Run Ktor apps with -Dio.ktor.development=true (detailed errors, and
     -- auto-reload when you also run a continuous build).

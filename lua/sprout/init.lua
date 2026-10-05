@@ -62,9 +62,16 @@ function M.info()
     ("- **lombok** `%s`"):format(jdtls.lombok() and vim.fn.fnamemodify(jdtls.lombok(), ":~") or "not found"),
     ("- **jdtls workspace** `%s`"):format(vim.fn.fnamemodify(jdtls.workspace_dir(p.root), ":~")),
     ("- **.idea/sprout.json** %s"):format(vim.uv.fs_stat(p.root .. "/.idea/sprout.json") and "yes" or "no (`:Sprout init`)"),
-    "",
-    "## Run configurations",
   }
+  if p.tool == "kotlin" then
+    local tc = require("sprout.toolchain")
+    local libs = tc.libraries(p.root)
+    lines[#lines + 1] = ("- **jdtls classpath** %s"):format(
+      libs and (("%d jars%s"):format(#libs, tc.stale(p.root) and " (module.yaml changed: `:Sprout reload`)" or ""))
+        or "not resolved yet (opening a Java file resolves it)"
+    )
+  end
+  vim.list_extend(lines, { "", "## Run configurations" })
   local rcs = idea.run_configs(p.root)
   if #rcs == 0 then
     lines[#lines + 1] = "- (none; defaults from .idea/sprout.json)"

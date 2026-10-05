@@ -169,9 +169,15 @@ The file also pins the project root, which is useful in monorepos.
 - Kotlin Toolchain (`kotlin init`, formerly Amper): projects are found by `project.yaml` or a
   `module.yaml` with a `product:`, and run through the `./kotlin` wrapper (`kotlin run -m <module>
   --main-class … --jvm-args …`). `ktor: enabled` / `springBoot: enabled` turn on the Ktor and
-  Spring features, and `settings.jvm.jdk.version` sets the project JDK. jdtls can't import these
-  projects, so Java files there get no classpath, and the Spring Boot language server isn't
-  started.
+  Spring features, and `settings.jvm.jdk.version` sets the project JDK. jdtls has no importer
+  for these projects, so sprout gives it one: when jdtls starts, `kotlin show dependencies`
+  resolves the dependencies in the background and sprout passes the jars (from the toolchain's
+  cache) and each module's `src/`/`test/` to jdtls, so Java files get completion and
+  diagnostics for libraries. Java code sees the project's Kotlin classes after a `kotlin build`
+  or `run`. Saving a `module.yaml` re-resolves; `:Sprout reload` forces it. If you pass
+  `--shared-cache-dir` to `kotlin`, set `opts = { kotlin_toolchain = { cache_dir = "…" } }`.
+  The Spring Boot language server isn't started in these projects yet. Kotlin files get their
+  completion from your Kotlin language server, which has to understand these projects itself.
 - bleep: Java inside bleep builds is served by Metals over BSP. sprout handles run/compile/test.
 
 ## Versioning
